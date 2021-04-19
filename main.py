@@ -55,7 +55,7 @@ sadmonkey = random.choice([
 
 #embeds
 help_embed=discord.Embed(title="OO OO! Aquí hay una lista de comandos disponibles:", description="_Nota: necesitas el permiso de **Gestionar roles** para que el bot responda a tus comandos._", color=0xf40101)
-help_embed.add_field(name='%rce start "apodo" _tiempo_', value="Crea un nuevo evento con el apodo entre comillas, durante el tiempo especificado.\nEl tiempo tiene tres parámetros (aunque puedes utilizar solo uno o dos): **m** (minutos), **h** (horas) y **d** (días).\n_EJEMPLO:_ si quieres que el evento dure 2 días y 50 minutos, escribe **2d 50m**.", inline=False)
+help_embed.add_field(name='%rce start "apodo" _tiempo_', value="Crea un nuevo evento con el apodo entre comillas, durante el tiempo especificado.\nEl tiempo tiene tres parámetros (aunque puedes utilizar solo uno o dos): **m** (minutos), **h** (horas) y **d** (días).\n_EJEMPLO:_ si quieres que el evento dure 2 días y 50 minutos, escribe **2d 50m**.\nTambién puedes escribir **0** si quieres que el evento dure indefinidamente.", inline=False)
 help_embed.add_field(name="%rce stop", value="Anula el evento actual.", inline=False)
 help_embed.add_field(name="%rce help", value="Muestra este mensaje de ayuda!", inline=False)
 help_embed.add_field(name="**IMPORTANTE**: intenta ubicar el rol del bot lo más alto posible en la jerarquía de roles, para que así el bot pueda renombrar a la mayor cantidad de usuarios posibles.", value="\u200B", inline=False)
@@ -83,8 +83,6 @@ async def start(ctx, newnick, duration):
     json.dump(userlist[serverid], userlist_file)
     userlist_file.close()
 
-  del userlist[serverid]
-
   unable = ""
   for user in ctx.guild.members:
     try: await user.edit(nick=newnick)
@@ -104,6 +102,8 @@ async def start(ctx, newnick, duration):
   nicks_file = open("nicks.json", "w")
   json.dump(nicks, nicks_file)
   nicks_file.close()
+
+  del userlist[serverid]
 
   await ctx.send("**RANDOM CHIMP EVENT IS READY**" + unable)
 
@@ -135,7 +135,7 @@ async def stop(ctx, serverid: str):
   if not unable == "":
     unable = "\n\nNo se pudieron cambiar los apodos de los siguientes usuarios:\n" + unable
 
-  #os.remove(serverid + ".json")
+  os.remove(serverid + ".json")
 
   times_file = open("times.json", "w")
   json.dump(times, times_file)
@@ -145,17 +145,17 @@ async def stop(ctx, serverid: str):
   json.dump(nicks, nicks_file)
   nicks_file.close()
 
+  await ctx.send("**RANDOM CHIMP EVENT IS OVER**" + unable)
+
   del oldnicks[serverid]
   del ctx.guild
   del ctx.send
-
-  await ctx.send("**RANDOM CHIMP EVENT IS OVER**" + unable)
 
 
 #INICIO
 @bot.event
 async def on_ready():
-  await bot.change_presence(activity=discord.Game(name="con el hado del mundo"))
+  await bot.change_presence(activity=discord.Game(name="con el hado del mundo | %rce help"))
   print('{0.user} is up and running'.format(bot))
   await timecheck()
 
@@ -165,6 +165,14 @@ async def on_ready():
 @bot.command(name="start")
 @has_permissions(manage_nicknames=True)
 async def requeststart(ctx, newnick: str, *, duration):
+
+  #longnick embed
+  longnick_embed = discord.Embed(title="El apodo que escogiste es muy largo 🐒", description="Debe ser de 32 caracteres o menos, el tuyo tenía **" + str(len(newnick)) + "** caracteres.", color=0xf40101)
+
+  #nick extenso
+  if len(newnick) > 32:
+    await ctx.send(embed = longnick_embed)
+    return
 
   #convert time
   duration = duration.replace("m", "*1").replace("h", "*60").replace("d", "*1440").replace(" ", "+")
@@ -245,7 +253,7 @@ async def on_member_join(member):
 async def on_member_update(before, member):
   serverid = str(member.guild.id)
 
-  if not serverid in oldnicks:
+  if serverid in times and not serverid in oldnicks and not serverid in userlist:
     try: await member.edit(nick=nicks[serverid])
     except: return
 
